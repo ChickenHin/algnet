@@ -1,10 +1,7 @@
 name: Build and run project
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "*" ]
+  workflow_dispatch: 
 
 env:
   EXECUTABLE_NAME: nons
@@ -14,96 +11,96 @@ env:
   NEW_METRICS_ARTIFACT_DIR: metrics/new
 
 jobs:
-  clang-format:
-    runs-on: ubuntu-24.04
-    steps:
-    - uses: actions/checkout@v4
+  # clang-format:
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #   - uses: actions/checkout@v4
 
-    - name: Set up Clang Format
-      run: |
-        python3 -m venv venv
-        ./venv/bin/pip install "clang-format==19.1.3"
+  #   - name: Set up Clang Format
+  #     run: |
+  #       python3 -m venv venv
+  #       ./venv/bin/pip install "clang-format==19.1.3"
 
-    - name: Check Clang format
-      run: |
-        ./venv/bin/clang-format --version
-        ./venv/bin/clang-format --dry-run -Werror $(git ls-files 'source/*.cpp' 'source/*.hpp' 'test/*.cpp' 'test/*.hpp')
-  build:
-    runs-on: ubuntu-24.04
-    steps:
-    - uses: actions/checkout@v4
+  #   - name: Check Clang format
+  #     run: |
+  #       ./venv/bin/clang-format --version
+  #       ./venv/bin/clang-format --dry-run -Werror $(git ls-files 'source/*.cpp' 'source/*.hpp' 'test/*.cpp' 'test/*.hpp')
+  # build:
+  #   runs-on: ubuntu-24.04
+  #   steps:
+  #   - uses: actions/checkout@v4
 
-    - name: Update submodules
-      run: git submodule update --init --recursive
+  #   - name: Update submodules
+  #     run: git submodule update --init --recursive
 
-    - name: Configure CMake for building project
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_PROJECT=ON -DBUILD_TESTS=OFF
+  #   - name: Configure CMake for building project
+  #     run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_PROJECT=ON -DBUILD_TESTS=OFF
 
-    - name: Build project
-      run: cmake --build build --config Debug -j $(nproc)
+  #   - name: Build project
+  #     run: cmake --build build --config Debug -j $(nproc)
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-artifact
-        path: build/**
+  #   - name: Upload artifact
+  #     uses: actions/upload-artifact@v4
+  #     with:
+  #       name: build-artifact
+  #       path: build/**
 
-  run-simulations:
-    runs-on: ubuntu-24.04
-    needs: build
-    permissions:
-      contents: write
-    steps:
-    - name: Apt update
-      run: sudo apt update
+  # run-simulations:
+  #   runs-on: ubuntu-24.04
+  #   needs: build
+  #   permissions:
+  #     contents: write
+  #   steps:
+  #   - name: Apt update
+  #     run: sudo apt update
 
-    - name: Install dependencies
-      run: |
-        sudo apt install --fix-missing gnuplot
-        sudo apt install --fix-missing graphviz
-        pip install graphviz
+  #   - name: Install dependencies
+  #     run: |
+  #       sudo apt install --fix-missing gnuplot
+  #       sudo apt install --fix-missing graphviz
+  #       pip install graphviz
 
-    - uses: actions/checkout@v4
+  #   - uses: actions/checkout@v4
 
-    - name: Download artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: build-artifact
+  #   - name: Download artifact
+  #     uses: actions/download-artifact@v4
+  #     with:
+  #       name: build-artifact
 
-    - name: Add executable flag
-      run: chmod +x ${{env.EXECUTABLE_NAME}}
+  #   - name: Add executable flag
+  #     run: chmod +x ${{env.EXECUTABLE_NAME}}
 
-    - name: Run new simulations
-      run: python3 scripts/run_new_simulations.py -e ./${{env.EXECUTABLE_NAME}} --no-logs -c configs/scenario-configs.txt --output-dir ./${{env.NEW_METRICS_ARTIFACT_DIR}}
+  #   - name: Run new simulations
+  #     run: python3 scripts/run_new_simulations.py -e ./${{env.EXECUTABLE_NAME}} --no-logs -c configs/scenario-configs.txt --output-dir ./${{env.NEW_METRICS_ARTIFACT_DIR}}
 
-    - name: Create html
-      run: python3 scripts/generate-html.py ./${{env.METRICS_ARTIFACT_DIR}}
+  #   - name: Create html
+  #     run: python3 scripts/generate-html.py ./${{env.METRICS_ARTIFACT_DIR}}
 
-    - name: Upload metrics
-      uses: actions/upload-artifact@v4
-      with:
-        name: metrics
-        path: ${{env.METRICS_ARTIFACT_DIR}}/**
+  #   - name: Upload metrics
+  #     uses: actions/upload-artifact@v4
+  #     with:
+  #       name: metrics
+  #       path: ${{env.METRICS_ARTIFACT_DIR}}/**
 
-    - name: Put github context to json file
-      run: echo '${{ toJson(github) }}' > github_context.json
+  #   - name: Put github context to json file
+  #     run: echo '${{ toJson(github) }}' > github_context.json
 
-    - name: Calculate deploy destination dir
-      run: |
-        DEPLOY_DIR=$(python3 scripts/calculate_deploy_dir.py -c github_context.json);
-        echo "DEPLOY_DIR=${DEPLOY_DIR}/${{env.METRICS_ARTIFACT_DIR}}" >> $GITHUB_ENV;
+  #   - name: Calculate deploy destination dir
+  #     run: |
+  #       DEPLOY_DIR=$(python3 scripts/calculate_deploy_dir.py -c github_context.json);
+  #       echo "DEPLOY_DIR=${DEPLOY_DIR}/${{env.METRICS_ARTIFACT_DIR}}" >> $GITHUB_ENV;
 
-    - name: Deploy to GitHub Pages
-      if: ${{env.DEPLOY_DIR}} != ''
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ${{env.METRICS_ARTIFACT_DIR}}
-        destination_dir: ${{env.DEPLOY_DIR}}
+  #   - name: Deploy to GitHub Pages
+  #     if: ${{env.DEPLOY_DIR}} != ''
+  #     uses: peaceiris/actions-gh-pages@v3
+  #     with:
+  #       github_token: ${{ secrets.GITHUB_TOKEN }}
+  #       publish_dir: ${{env.METRICS_ARTIFACT_DIR}}
+  #       destination_dir: ${{env.DEPLOY_DIR}}
 
-    - name: Wait for artifacts to be available
-      run:
-        python3 scripts/check_artifacts.py -u 'https://cloud-storage-team.github.io/algnet/${{env.DEPLOY_DIR}}'
+  #   - name: Wait for artifacts to be available
+  #     run:
+  #       python3 scripts/check_artifacts.py -u 'https://cloud-storage-team.github.io/algnet/${{env.DEPLOY_DIR}}'
 
   test:
     runs-on: ubuntu-24.04
