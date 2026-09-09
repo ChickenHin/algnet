@@ -2,8 +2,8 @@ name: Load testing
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ "main" ]
+  # push:
+  #   branches: [ "main" ]
   workflow_call:
 
 env:
